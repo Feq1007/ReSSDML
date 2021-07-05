@@ -2,7 +2,6 @@
 import math
 import torch
 
-
 class MicroCluster:
     def __init__(self, lmda=0.1):
         # 簇基本信息
@@ -29,32 +28,21 @@ class MicroCluster:
         self.ss = self.ss + x * x
         self.t = 0
 
-    # 改
-    def merge(self, mc):
-        """
-        待修改可靠性合并
-        """
-        self.n += mc.n
-        self.ls += mc.ls
-        self.ss += mc.ss
-        self.t = max(self.t, mc.t)
-        self.re = (self.re + mc.re) / 2
-
     def update_reliability(self, p, increase, exp=1):
         """
         该确定如何更新可靠性
         """
         if increase:  # 分类准确，或者针对无标签数据， 近邻：同增异减
-            self.re += (1 - self.re) * math.pow(p, exp)
+            self.re += (1 - self.re) * math.pow(math.e, p - 1)
         else:
-            self.re -= (1 - self.re) * math.pow(p, exp / math.e)
+            self.re -= (1 - self.re) * math.pow(math.e, p - 1)
 
     def update(self, ):
         """
         通过时间更新可靠性
         """
         self.t += 1
-        self.re = self.re * math.pow(2, - self.lmda * self.espilon * self.t)
+        self.re = self.re * math.pow(math.e, - self.lmda * self.espilon * self.t)
         return self.re
 
     # 查
@@ -62,6 +50,7 @@ class MicroCluster:
         ls_mean = self.ls / self.n
         ss_mean = self.ss / self.n
         variance = ss_mean - ls_mean ** 2
+        variance[variance<0] = 0 # 归一化后方差很小，所以需要保证浮点方差为负时应该修正为0
         radius = torch.sqrt(torch.sum(variance))
         return radius
 

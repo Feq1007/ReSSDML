@@ -1,7 +1,7 @@
 import os
 
-file = 'weather.tsv'
-data_type = 'weather'
+file = 'kddcup.data.mm_std'
+data_type = 'kddcup99'
 data_dir = os.path.join('data', data_type, 'raw')
 model_dir = os.path.join('data', data_type, 'model')
 report_dir = os.path.join('data', data_type, 'report')
@@ -35,21 +35,19 @@ class HyperParameter():
         self.save_steps = -1
         self.device = 'cuda'
         self.cuda = '0'
-        self.init_rate = 20
-        self.eval_rate = 100
-        self.sep = ' '  # csv文件的seq类型
-        self.concept_drift = False
+        self.init_rate = 1000
+        self.eval_rate = 1000
+        self.sep = ','  # csv文件的seq类型
+        self.data_shuffle = False
 
         # 数据流相关
-        self.metric_learning = True # 是否需要度量
-        self.init_k = 3 # 初始化时每个类的微簇个数
-        self.K = 3  # 有标签数据到来时更新周围的几个微簇
+        self.init_k = 10 # 初始化时每个类的微簇个数
+        self.K = 5  # 有标签数据到来时更新周围的几个微簇
         self.MAXC = 1000  # 最多维护多少微簇
         self.MINDIS = 1  # 最短距离
-        self.k_list = [1, 3, 5]  # 集成学习的knn的k
-        self.semi_rate = 0.1
-        self.MINRE = 1e-5
-
+        self.unlabeled_ratio = 0.9
+        self.metric_learning = False
+        self.MINRE = 0.9
 
 if __name__ == '__main__':
     args = HyperParameter()
