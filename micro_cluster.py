@@ -3,7 +3,7 @@ import math
 import torch
 
 class MicroCluster:
-    def __init__(self, lmda=0.1):
+    def __init__(self, lmda=0.01):
         # 簇基本信息
         self.n = 0
         self.nl = 0
@@ -50,7 +50,7 @@ class MicroCluster:
         ls_mean = self.ls / self.n
         ss_mean = self.ss / self.n
         variance = ss_mean - ls_mean ** 2
-        variance[variance<0] = 0 # 归一化后方差很小，所以需要保证浮点方差为负时应该修正为0
+        #variance[variance<0] = 0 # 归一化后方差很小，所以需要保证浮点方差为负时应该修正为0
         radius = torch.sqrt(torch.sum(variance))
         return radius
 

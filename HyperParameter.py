@@ -1,7 +1,7 @@
 import os
 
-file = 'kddcup.data.mm_std'
-data_type = 'kddcup99'
+file = 'Sensorless_drive_diagnosis.csv'
+data_type = 'sensorless_drive'
 data_dir = os.path.join('data', data_type, 'raw')
 model_dir = os.path.join('data', data_type, 'model')
 report_dir = os.path.join('data', data_type, 'report')
@@ -31,23 +31,21 @@ class HyperParameter():
         self.warmup_steps = -1
         self.max_grad_norm = 1
         self.max_steps = 10000
-        self.logging_steps = 10000
+        self.logging_steps = 1000
         self.save_steps = -1
         self.device = 'cuda'
         self.cuda = '0'
-        self.init_rate = 1000
-        self.eval_rate = 1000
+        self.init_rate = 1000 # 大于1则是个数，0-1则是比例
         self.sep = ','  # csv文件的seq类型
-        self.data_shuffle = False
 
         # 数据流相关
         self.init_k = 10 # 初始化时每个类的微簇个数
         self.K = 5  # 有标签数据到来时更新周围的几个微簇
         self.MAXC = 1000  # 最多维护多少微簇
-        self.MINDIS = 1  # 最短距离
-        self.unlabeled_ratio = 0.9
-        self.metric_learning = False
-        self.MINRE = 0.9
+        self.unlabeled_ratio = 0.7
+        self.metric_learning = True
+        self.MINRE = 0.95
+        self.lmda = 1e-1 # 无标签数量大时，lmda也应该设置大一点
 
 if __name__ == '__main__':
     args = HyperParameter()

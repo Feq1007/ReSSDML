@@ -40,7 +40,7 @@ class ReSSDML:
             known = True if label != -1 else False
             self.labeled_num += 1 if known else 0
 
-            topk = self.compute_distance(data)
+            topk = self.topk(data)
             pred = self.classify(topk)
             self.true_label.append(self.ms.y_stream[i])
             self.predict_label.append(pred[0])
@@ -48,11 +48,12 @@ class ReSSDML:
             if known:
                 self.update_manifold(topk, self.ms.y_stream[i]) # self.ms.y_stream[i] 是 真实标签
 
-            self.decay_mcs()
             self.add_point(data, pred, label, topk, known)
+            self.decay_mcs()
 
-            if i % self.args.eval_batch_size == 0:
+            if (i+1) % self.args.logging_steps == 0:
                 self.evaluation()
+        self.evaluation()
 
     def initialization(self):
         data = torch.Tensor(self.ms.metric_dataset.data)
@@ -70,7 +71,7 @@ class ReSSDML:
                 kmeans.fit(data_l)
                 kmeans_label = kmeans.labels_
                 for l_temp in range(self.args.init_k):
-                    mc = MicroCluster()
+                    mc = MicroCluster(lmda=self.args.lmda)
                     mc.label = l_ref
                     mc.re = 1
                     mc.t = 0
@@ -79,7 +80,7 @@ class ReSSDML:
                     self.mcs.append(mc)
             else:
                 for d in data_l:
-                    mc = MicroCluster()
+                    mc = MicroCluster(lmda=self.args.lmda)
                     mc.label = l_ref
                     mc.re = 1
                     mc.t = 0
@@ -99,17 +100,15 @@ class ReSSDML:
         res = np.zeros(len(self.ms.labels))
         for i in range(len(topk)):
             try:
-                res[self.ms.labels.index(self.mcs[topk[1][i]].label)] /= topk[1][i]
+                res[self.ms.labels.index(self.mcs[topk[1][i]].label)] /= topk[0][i]
             except:
-                print(topk)
-                self.print()
                 os._exit(0)
         return max(softmax(res))
 
-    def compute_distance(self, new_point):
+    def topk(self, new_point):
         centers = torch.stack([mc.get_center() for mc in self.mcs])
         dis = self.ms.distance.compute_mat(query_emb=centers, ref_emb=new_point).flatten()
-        topk = torch.topk(dis, self.args.K, largest=False, sorted=True)
+        topk = torch.topk(dis, min(self.args.K, len(dis)), largest=False, sorted=True) # 如果个数小于k的话会报错
         return topk
 
     # 分类
@@ -138,7 +137,6 @@ class ReSSDML:
                 self.mcs[idx].update_reliability(pk[i], True)
             else:
                 self.mcs[idx].update_reliability(pk[i], False)
-
         return True
 
     # 微簇管理
@@ -152,11 +150,12 @@ class ReSSDML:
     def _need_create_mc(self, pred, label, known=False):
         return (pred[2] > self.mcs[pred[1]].get_radius()) or (known and pred[0] != label)
 
+
     def create_mc(self, point, pred, label, topk, known):
         if len(self.mcs) >= self.args.MAXC:
             self.drop()
-            topk = self.compute_distance(point)
-        mc = MicroCluster()
+            topk = self.topk(point)
+        mc = MicroCluster(lmda=self.args.lmda)
         mc.radius = self.avg_radius
         if known:
             mc.label = label
@@ -174,9 +173,11 @@ class ReSSDML:
             if mc.re < self.args.MINRE:
                 self.mcs.pop(i)
 
-    def decay_mcs(self, ):
-        for mc in self.mcs:
-            mc.update()
+    def decay_mcs(self,):
+        for i,mc in enumerate(self.mcs):
+            re = mc.update()
+            if re < self.args.MINRE:
+                self.mcs.pop(i)
 
     def evaluation(self):
         rep = classification_report(self.true_label, self.predict_label)
@@ -191,4 +192,5 @@ if __name__ == '__main__':
     print("ture label: ", ressdml.true_label)
     print("predict label : ", ressdml.predict_label)
     print("true number : ", ressdml.labeled_num)
+    ressdml.evaluation()
     ressdml.print()

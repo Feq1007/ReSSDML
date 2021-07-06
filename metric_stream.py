@@ -48,7 +48,7 @@ class MetricStream:
 
         # 数据流数据集
         stream_dataset = MetricDataset(x_stream, y_semi_stream)
-        self.stream_dataloader = DataLoader(stream_dataset, batch_size=1, shuffle=self.args.data_shuffle)
+        self.stream_dataloader = DataLoader(stream_dataset, batch_size=1, shuffle=False)
 
         # 距离函数：L2 Norm
         self.distance = LpDistance(power=2)
@@ -90,7 +90,6 @@ class MetricStream:
                                  replace=False)
         y_semi_stream = y_stream.copy()
         y_semi_stream[index] = -1
-        p = 0
         return x_init, x_stream, y_init, y_stream, y_semi_stream
 
     def evaluation(self):
