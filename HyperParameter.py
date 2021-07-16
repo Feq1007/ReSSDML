@@ -1,7 +1,7 @@
 import os
 
 data_type = 'weather'
-file = 'weather.csv'
+file = 'weather.dsv'
 data_dir = os.path.join('data', data_type)
 
 
@@ -22,7 +22,7 @@ class HyperParameter():
         self.maxUMC = 200
         self.unlabeled_ratio = 0.7
         self.minRE = 0.9
-        self.lmbda = 1e-4  # 无标签数量大时，lmda也应该设置大一点
+        self.lmbda = 1e-3  # 无标签数量大时，lmda也应该设置大一点
         self.logging_steps = 1000
 
         # 训练相关

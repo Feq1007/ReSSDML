@@ -1,7 +1,7 @@
 # 同一数据格式
 import pandas as pd
 
-task = 'GSD'
+task = 'weather'
 
 
 # iris数据
@@ -19,11 +19,11 @@ def iris(path='data/iris/raw/iris.data'):
 # weather 数据集
 def weather():
     path = 'data/weather/raw/weather.mat'
-    from scipy.io import loadmat
-    import numpy
-    annots = loadmat(path)
-    data = annots['weather']
-    numpy.savetxt(path.replace('.mat', '.tsv'), data, delimiter=',')
+    # from scipy.io import loadmat
+    # import numpy
+    # annots = loadmat(path)
+    # data = annots['weather']
+    # numpy.savetxt(path.replace('.mat', '.tsv'), data, delimiter=',')
 
     mm_std(path.replace('.mat','.tsv'),path.replace('.mat','.dsv'),sep=',')
 
@@ -210,21 +210,21 @@ def kddcup99():
 
 def mm_std(path, des, sep):
     df = pd.read_csv(path, header=None, sep=sep)
-    X = df.iloc[:,:-1]
+    X = df.iloc[:,:-1].values * 100
     y = df.iloc[:,-1]
     df_mm = MinMaxScaler().fit_transform(X)
-    df_mm = pd.DataFrame(df_mm * 100)
-    print('df_mm:\n', df_mm.describe())
-    newdata = np.concatenate([df_mm, np.array(y, dtype=np.int8).reshape([-1, 1])], axis=1)
+    df_mm = pd.DataFrame(df_mm)
+    # print('df_mm:\n', df_mm.describe())
+    # newdata = np.concatenate([df_mm, np.array(y, dtype=np.int8).reshape([-1, 1])], axis=1)
 
     # df_mm_std = StandardScaler().fit_transform(df_mm)
     # df_mm_std = pd.DataFrame(df_mm_std)
     # print('df_mm_std:\n', df_mm_std.describe())
 
-    # df_mm_std = Normalizer().fit_transform(df_mm)
-    # df_mm_std = pd.DataFrame(df_mm_std)
-    # print('df_mm_std:\n', df_mm_std.describe())
-    # newdata = np.concatenate([df_mm_std, np.array(y, dtype=np.int8).reshape([-1, 1])], axis=1)
+    df_mm_std = Normalizer().fit_transform(df_mm)
+    df_mm_std = pd.DataFrame(df_mm_std)
+    print('df_mm_std:\n', df_mm_std.describe())
+    newdata = np.concatenate([df_mm_std, np.array(y, dtype=np.int8).reshape([-1, 1])], axis=1)
 
     df = pd.DataFrame(newdata)
     df.to_csv(des, index=None, columns=None, header=None)

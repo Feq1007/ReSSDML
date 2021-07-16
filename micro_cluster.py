@@ -2,6 +2,7 @@
 import math
 import torch
 
+esp = 0.00005
 
 class MicroCluster:
     def __init__(self, point, re=1, label=-1, radius=-1, lmda=0.01):
@@ -55,6 +56,10 @@ class MicroCluster:
 
     def get_center(self):
         return self.ls / self.n
+
+    def update_time(self, p):
+        global esp
+        self.espilon = esp * p
 
     def get_radius(self):
         if self.n <= 1:

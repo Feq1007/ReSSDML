@@ -18,6 +18,7 @@ class ReSSDML:
         # 初始化微簇
         self.mcs = []
         self.ulmcs = []
+        self.statistic = {}
         self.avg_radius = 0
         self.initialization()
 
@@ -32,6 +33,7 @@ class ReSSDML:
     def print(self, topk):
         print('平均半径:', self.avg_radius)
         print('新建微簇个数：', self.create_num)
+        print('标签统计信息：', self.statistic)
         data = {'n': [], 'nl': [], 'label': [], 'ls': [], 'ss': [], 't': [], 're': [], 'ra': []}
         for mc in self.mcs:
             data['n'].append(mc.n)
@@ -68,6 +70,9 @@ class ReSSDML:
             print('ra is ', [self.mcs[idx].get_radius() for idx in topk[1]])
 
     def initialization(self):
+        for key in self.ms.labels:
+            self.statistic[key] = 0
+
         data = torch.Tensor(self.ms.metric_dataset.data)
         data = data.cuda() if self.ms.cuda else data
         data = self.ms.embedding(data).cpu().numpy()
@@ -76,6 +81,7 @@ class ReSSDML:
         # 通过聚类检查效果
         for l_ref in self.ms.labels:
             data_lref = data[label == l_ref]
+            self.statistic[l_ref] = len(data_lref)
             if len(data_lref) > self.args.init_k:
                 kmeans = KMeans(n_clusters=self.args.init_k, )
                 kmeans.fit(data_lref)
@@ -122,8 +128,8 @@ class ReSSDML:
             if (i + 1) % self.args.logging_steps == 0:
                 self.print(topk)
             if (i + 1) % 1000 == 0:
-                # self.adjust()
-                pass
+                self.adjust()
+                # pass
 
             self.add_point(data, pred, label, topk, known)
             self.decay_mcs()
@@ -220,11 +226,13 @@ class ReSSDML:
                     mc.re = 1
                     self.ulmcs.pop(untopk[1][0])
                     self.mcs.append(mc)
+                    self.statistic[mc.label] += 1
                 else:
                     self.ulmcs[untopk[1][0]].insert(point.flatten())
             else:  # create
                 if known:
                     self.create_mc(point, 1, None, label, known)
+                    self.statistic[label] += 1
                 else:
                     self.create_num += 1
                     if len(self.ulmcs) > self.args.maxUMC:
@@ -238,6 +246,7 @@ class ReSSDML:
             return self.create_mc(point, re, pred, label, known)
         else:
             self.mcs[pred[1]].insert(point.flatten())
+            self.statistic[self.mcs[pred[1]].label] += 1
             return pred[1]
 
     def _need_create_mc(self, pred, label, known=False):
@@ -251,9 +260,11 @@ class ReSSDML:
         if known:
             mc.label = label
             mc.re = 1
+            self.statistic[label] += 1
         else:
             mc.label = pred[0]
             mc.re = re
+            self.statistic[pred[0]] += 1
         self.mcs.append(mc)
         return self.mcs[-1]
 
@@ -262,17 +273,25 @@ class ReSSDML:
             return elem.t
 
         self.mcs.sort(key=key, reverse=False)  # 是否需要通过排序来解决，并且一次只删除一个，基本上每次都会删除
+        for i in range(1,6):
+            self.statistic[self.mcs[-i].label] -= 1
         self.mcs = self.mcs[:-5]
 
         for i, mc in enumerate(self.mcs):
             if mc.re < self.args.minRE:
+                self.statistic[mc.label] -= 1
                 self.mcs.pop(i)
 
     def decay_mcs(self, ):
+        ratio = [v for k,v in self.statistic.items()]
+        ratio = softmax(ratio)
         for i, mc in enumerate(self.mcs):
+            mc.update_time(ratio[self.ms.labels.index(mc.label)])
             re = mc.update()
             if re < self.args.minRE:
+                self.statistic[mc.label] -= 1
                 self.mcs.pop(i)
+
         for i, mc in enumerate(self.ulmcs):
             re = mc.update()
             if re < self.args.minRE:
@@ -283,8 +302,7 @@ class ReSSDML:
         if len(centers) > 1:
             self.avg_radius = torch.max(torch.Tensor([mc.get_radius() for mc in self.mcs if mc.n > 1]))
             for mc in self.mcs:
-                if mc.n <= 1:
-                    mc.radius = self.avg_radius
+                mc.radius = self.avg_radius
 
     def evaluation(self):
         rep = classification_report(self.true_label, self.predict_label, digits=4)
