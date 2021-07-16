@@ -1,7 +1,7 @@
 # 同一数据格式
 import pandas as pd
 
-task = 'sensor'
+task = 'GSD'
 
 
 # iris数据
@@ -23,7 +23,18 @@ def weather():
     import numpy
     annots = loadmat(path)
     data = annots['weather']
-    numpy.savetxt(path.replace('.mat', '.tsv'), data, delimiter=' ')
+    numpy.savetxt(path.replace('.mat', '.tsv'), data, delimiter=',')
+
+    mm_std(path.replace('.mat','.tsv'),path.replace('.mat','.dsv'),sep=',')
+
+# shuttle
+def shuttle():
+    path = 'data/shuttle/raw/shuttle_Norm.mat'
+    from scipy.io import loadmat
+    import numpy
+    annots = loadmat(path)
+    data = annots['shuttle_Norm']
+    numpy.savetxt(path.replace('.mat', '.csv'), data, delimiter=',')
 
 
 # spam 数据集
@@ -31,21 +42,72 @@ def spam():
     from scipy.io import arff
     import pandas as pd
 
-    filepath = 'spam/spam_data.arff'
+    filepath = 'data/spam/spam_data.arff'
+
     data = arff.loadarff(filepath)
     df = pd.DataFrame(data[0])
-    # 样本
-    sample = df.values[:, 0:len(df.values[0]) - 1]
+    # print(df.describe())
+    # print(df.head())
+    # # 样本
     # 对标签进行处理
-    # [b'1' b'-1' ...]bytes类型
-    label = df.values[:, -1]  # 要处理的标签
-    cla = []  # 处理后的标签
+    sample = df.values[:, :-1]
+    label = df.values[:, -1]
+    cla = []
+    dic = {
+        b'spam': 0,
+        b'legitimate': 1
+    }
     for i in label:
-        test = int(i)
-        cla.append(test)
-    cla
+        cla.append(dic[i])
+    data = np.concatenate([sample, np.array(cla).reshape([-1, 1])], axis=1).astype(np.int8)
+    # np.save('data/spam/spam.array', data)
+    df = pd.DataFrame(data)
+    df.to_csv('data/spam/spam.csv', index=None, columns=None, header=None)
 
+# UCI
+def uci():
+    with open('data/UCI HAR Dataset/train/X_train.txt','r') as f:
+        length = []
+        for line in f.readlines():
+            l = line.strip().split(' ')
+            if len(l) not in length:
+                length.append(len(l))
+        print(length)
 
+    X = pd.read_csv('data/UCI HAR Dataset/train/X_train.txt', header=None, sep=' ')
+    print(X)
+    X = X.values
+    print(X)
+    y = pd.read_csv('data/UCI HAR Dataset/train/y_train.txt', header=None, sep=',').values
+    df_mm = MinMaxScaler().fit_transform(X)
+    df_mm = pd.DataFrame(df_mm * 100)
+    print('df_mm:\n', df_mm.describe())
+    newdata = np.concatenate([df_mm, np.array(y, dtype=np.int8).reshape([-1, 1])], axis=1)
+    df = pd.DataFrame(newdata)
+    df.to_csv(des, index=None, columns=None, header=None)
+
+# GSD
+def gsd():
+    # for i in range(1,11):
+    #     file = f'data/GSD/batch{i}.dat'
+    #     with open(file.replace('.dat','.csv'),'w') as fout:
+    #         with open(file) as f:
+    #             for line in f.readlines():
+    #                 line = line.strip().split(' ')
+    #                 t = []
+    #                 for j in line[1:]:
+    #                     t.append(j.split(':')[1]+',')
+    #                 s = ''.join(t)
+    #                 fout.write(s+line[0]+'\n')
+    # for i in range(1,11):
+    #     file = f'data/GSD/batch{i}.csv'
+    #     mm_std(file,file.replace('.csv','.tsv'),',')
+    with open('data/GSD/gsd.csv', 'w') as fout:
+        lines = []
+        for i in range(1,11):
+            with open(f'data/GSD/batch{i}.tsv') as f:
+                lines.extend(f.readlines())
+        fout.writelines(lines)
 # kddcup99
 import numpy as np
 import pandas as pd
@@ -145,31 +207,40 @@ def kddcup99():
     df = pd.DataFrame(newdata)
     df.to_csv('kddcup.data.mm_std', index=None, columns=None, header=None)
 
+
 def mm_std(path, des, sep):
     df = pd.read_csv(path, header=None, sep=sep)
     X = df.iloc[:,:-1]
     y = df.iloc[:,-1]
     df_mm = MinMaxScaler().fit_transform(X)
-    df_mm = pd.DataFrame(df_mm)
+    df_mm = pd.DataFrame(df_mm * 100)
     print('df_mm:\n', df_mm.describe())
+    newdata = np.concatenate([df_mm, np.array(y, dtype=np.int8).reshape([-1, 1])], axis=1)
 
-    df_mm_std = StandardScaler().fit_transform(df_mm)
-    df_mm_std = pd.DataFrame(df_mm_std)
-    print('df_mm_std:\n', df_mm_std.describe())
+    # df_mm_std = StandardScaler().fit_transform(df_mm)
+    # df_mm_std = pd.DataFrame(df_mm_std)
+    # print('df_mm_std:\n', df_mm_std.describe())
 
-    newdata = np.concatenate([df_mm_std, np.array(y, dtype=np.int8).reshape([-1, 1])], axis=1)
+    # df_mm_std = Normalizer().fit_transform(df_mm)
+    # df_mm_std = pd.DataFrame(df_mm_std)
+    # print('df_mm_std:\n', df_mm_std.describe())
+    # newdata = np.concatenate([df_mm_std, np.array(y, dtype=np.int8).reshape([-1, 1])], axis=1)
+
     df = pd.DataFrame(newdata)
     df.to_csv(des, index=None, columns=None, header=None)
 
 
 # sensor task
 def sensor():
-    src = 'data/sensorless_drive/raw/Sensorless_drive_diagnosis.txt'
-    des = 'data/sensorless_drive/raw/Sensorless_drive_diagnosis.csv'
+    src = 'data/sensor/raw/sensor.txt'
+    des = 'data/sensor/raw/sensor.csv'
     mm_std(src, des, ' ')
 
 if task == 'kddcup99':
-    kddcup99()
+    # kddcup99()
+    src = 'data/kddcup99/raw/kddcup.data_10_percent_corrected.csv'
+    des = 'data/kddcup99/raw/kddcup.data.tsv'
+    mm_std(src,des,',')
 elif task == 'iris':
     iris()
 elif task == 'weather':
@@ -178,3 +249,9 @@ elif task == 'spam':
     spam()
 elif task == 'sensor':
     sensor()
+elif task == 'shuttle':
+    shuttle()
+elif task == 'UCI':
+    uci()
+elif task == 'GSD':
+    gsd()

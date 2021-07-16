@@ -58,7 +58,7 @@ class MetricStream:
             self.miner = BatchEasyHardMiner()
             self.loss_func = TripletMarginLoss(distance=self.distance)
             if model_type == 'normal':
-                self.model = Shallow(in_dim, in_dim * 2, in_dim, int(in_dim * 2 / 3))
+                self.model = Shallow(in_dim, in_dim * 3, in_dim * 3, in_dim * 2)
 
             if self.args.device == 'cuda' and torch.cuda.is_available():
                 self.cuda = True
@@ -143,3 +143,4 @@ if __name__ == "__main__":
     args = HyperParameter()
     ms = MetricStream(args=args, model_type='normal')
     ms.evaluation()
+    print(ms.distance.compute_mat(query_emb=torch.Tensor([[1,2,3]]),ref_emb=torch.Tensor([[4,5,6]])))

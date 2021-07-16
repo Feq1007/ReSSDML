@@ -1,0 +1,7 @@
+task,init_rate,metric_learning,init_k,K,maxMC,maxUMC,unlabeled_ratio,minRE,lmbda,acc
+kddcup99,1000,True,30,5,1000,200,0.7,0.9,1e-4,99.47
+sensor,1000,True,30,5,1000,200,0.7,0.9,1e-4,99.50
+shuttle,1000,True,30,5,1000,200,0.7,0.9,1e-4,98.56
+spam,1000,True,30,5,1000,200,0.7,0.9,1e-4,93.57
+gsd,50,True,10,5,1000,200,0.7,0.9,1e-4,90.79
+gsd,500,True,20,5,1000,200,0.7,0.9,1e-4,89.45

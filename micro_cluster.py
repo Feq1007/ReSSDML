@@ -2,30 +2,30 @@
 import math
 import torch
 
+
 class MicroCluster:
-    def __init__(self, lmda=0.01):
+    def __init__(self, point, re=1, label=-1, radius=-1, lmda=0.01):
         # 簇基本信息
-        self.n = 0
-        self.nl = 0
-        self.ls = 0
-        self.ss = 0
+        self.n = 1
+        self.nl = 1 if label == -1 else 0
+        self.ls = point
+        self.ss = torch.square(point)
         self.t = 0
-        self.re = 0  # 可靠性
-        self.label = -1
-        self.radius = -1  # 对于只有一个样本的mc，半径为默认值,在初始化时赋值
+        self.re = re  # 可靠性
+        self.label = label if label!=-1 else -1
+        self.radius = radius if radius!=-1 else -1  # 对于只有一个样本的mc，半径为默认值,在初始化时赋值
 
         # 其他计算参数
-        self.radius_factor = 1.8
         self.espilon = 0.00005
         self.lmda = lmda
-        self.min_variance = math.pow(1, -5)
+        self.radius_factor = 1
 
     # 增
-    def insert(self, x, labeled=False):
+    def insert(self, point, labeled=False):
         self.n += 1
-        self.nl += 1 if labeled else 0
-        self.ls = self.ls + x
-        self.ss = self.ss + x * x
+        self.nl += 0 if labeled else 1
+        self.ls = self.ls + point
+        self.ss = self.ss + torch.square(point)
         self.t = 0
 
     def update_reliability(self, p, increase, exp=1):
@@ -47,11 +47,10 @@ class MicroCluster:
 
     # 查
     def get_deviation(self):
-        ls_mean = self.ls / self.n
-        ss_mean = self.ss / self.n
-        variance = ss_mean - ls_mean ** 2
-        #variance[variance<0] = 0 # 归一化后方差很小，所以需要保证浮点方差为负时应该修正为0
-        radius = torch.sqrt(torch.sum(variance))
+        ls_mean = torch.sum(torch.square(self.ls / self.n))
+        ss_mean = torch.sum(self.ss / self.n)
+        variance = ss_mean - ls_mean
+        radius = torch.sqrt(variance)
         return radius
 
     def get_center(self):
@@ -60,11 +59,11 @@ class MicroCluster:
     def get_radius(self):
         if self.n <= 1:
             return self.radius
-        return self.get_deviation() * self.radius_factor
+        return max(self.radius,self.get_deviation() * self.radius_factor)
 
     def __str__(self):
         return f"n = {self.n}; nl = {self.nl}; label = {self.label}; ls = {self.ls.shape}; ss = {self.ss.shape}; t = {self.t}; re = {self.re}; ra = {self.get_radius()}\n"
 
 
 if __name__ == '__main__':
-    mc = MicroCluster()
+    mc = MicroCluster(torch.Tensor([1, 2, 3]))
